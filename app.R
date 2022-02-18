@@ -188,16 +188,26 @@ server <- function(input, output) {
         message("button clicked for user-supplied text")
 
         numwords <- input$numwords_user
-        input_text <- dplyr::tibble(text = paste0(".", substr(input$usertext, 1, 5000)))
+        input_text <- dplyr::tibble(text = substr(input$usertext, 1, 5000))
         ngrams <- input$user_ngrams
         words_to_extract <- input$user_words
+
+message(input$usertext)
 
         message("generating user-defined text")
         # see above: fails on my tiny AWS server when using future_promise
         # future_promise( {} , seed = as.numeric(Sys.time()))
-        markovtext::get_word_freqs(input_text, num_words =  words_to_extract, n_grams = ngrams) %>%
-            markovtext::generate_text(word_length = numwords)
+        w <- markovtext::get_word_freqs(input_text, num_words =  words_to_extract, n_grams = ngrams)
 
+        message(head(w))
+
+        result <- try(markovtext::generate_text(w, word_length = numwords))
+
+        if ("try-error" %in% class(result)){
+          result <- "Please enter more text with that uses more than 3 or 4 different words."
+        }
+
+        result
     })
 
     output$generated_text_user <- renderText(
