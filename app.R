@@ -12,6 +12,8 @@ library(markovtext)
 library(promises)
 library(future)
 library(bslib)
+library(shinycssloaders)
+
 #library(bs4Dash)
 
 # Define UI for application that draws a histogram
@@ -77,7 +79,8 @@ ui <- fluidPage(
                      ),
                      mainPanel(
                          # Show a plot of the generated distribution
-                         textOutput("generated_text")
+                         textOutput("generated_text") %>%
+                             shinycssloaders::withSpinner()
                      )
                  )
         ),
@@ -104,7 +107,8 @@ ui <- fluidPage(
                      ),
                      mainPanel(
                          # Show a plot of the generated distribution
-                         textOutput("generated_text_user")
+                         textOutput("generated_text_user") %>%
+                             shinycssloaders::withSpinner()
                      )
                  )
         ),
@@ -126,7 +130,7 @@ ui <- fluidPage(
                  healthcare, and qualitative research methods with a focus on
                  phenomenological analysis."),
                  p(tags$a("Visit my personal website here", href = "https://cbelanger.netlify.app"),
-                   "and", tags$a("my professional website here", href = "https://cbelanger.netlify.app")),
+                   "and", tags$a("my professional website here", href = "https://www.belangeranalytics.com"), "."),
                  h3("About the algorithm"),
                  p("Text is generated using probabilistic model based on Markov chains."),
                  h4("Processing input text"),
@@ -147,7 +151,7 @@ ui <- fluidPage(
 # Define server logic required to draw a histogram
 server <- function(input, output) {
 
-    future::plan(future::multisession())
+    #future::plan(future::multisession())
 
     generated_text <- NULL
     wordfreqs <- NULL
@@ -156,6 +160,7 @@ server <- function(input, output) {
     text <- shiny::eventReactive(input$generate_button, {
 
         message("button clicked")
+
         numwords <- input$numwords
         if (input$wordfreqs == "The Whale's Monologue") wordfreqs <- markovtext::wordfreqs_whale_3grams
         if (input$wordfreqs == "Cat in the Hat") wordfreqs <- markovtext::wordfreqs_catinthehat_3grams
@@ -165,35 +170,38 @@ server <- function(input, output) {
         if (input$wordfreqs == "Whale's Monologue") wordfreqs <- markovtext::wordfreqs_whale_3grams
         if (input$wordfreqs == "Nietzsche") wordfreqs <- markovtext::wordfreqs_zarathustra_3grams
 
-        future_promise( {markovtext::generate_text(wordfreqs, word_length = numwords)} , seed = as.numeric(Sys.time()))
 
+        # note: app crashes on my AWS tiny Shiny server when I use future_promise
+        # possibly because it only has one core to begin with? unclear.
+        #future_promise( {markovtext::generate_text(wordfreqs, word_length = numwords)} , seed = as.numeric(Sys.time()))
+
+        markovtext::generate_text(wordfreqs, word_length = numwords)
     })
 
     output$generated_text <- renderText(
-        text() %...>% paste0("...")
+        text() %>% paste0("...") #%...>% paste0("...")
     )
 
 
     text_user <- shiny::eventReactive(input$generate_button_user, {
 
         message("button clicked for user-supplied text")
+
         numwords <- input$numwords_user
-        input_text <- dplyr::tibble(text = paste0(".",
-                                                  substr(input$usertext, 1, 5000)
-        ))
+        input_text <- dplyr::tibble(text = paste0(".", substr(input$usertext, 1, 5000)))
         ngrams <- input$user_ngrams
         words_to_extract <- input$user_words
 
-        future_promise( {
-            markovtext::get_word_freqs(input_text, num_words =  words_to_extract, n_grams = ngrams) %>%
-                markovtext::generate_text(word_length = numwords)
-        } ,
-        seed = as.numeric(Sys.time()))
+        message("generating user-defined text")
+        # see above: fails on my tiny AWS server when using future_promise
+        # future_promise( {} , seed = as.numeric(Sys.time()))
+        markovtext::get_word_freqs(input_text, num_words =  words_to_extract, n_grams = ngrams) %>%
+            markovtext::generate_text(word_length = numwords)
 
     })
 
     output$generated_text_user <- renderText(
-        text_user() %...>% paste0("...")
+        text_user() %>% paste0("...")# %...>% paste0("...")
     )
 }
 
