@@ -23,6 +23,21 @@ ui <- fluidPage(
     tags$head(tags$style(type="text/css",
                          HTML('.container-fluid {  max-width: 1000px; padding:25px; margin-left: auto; margin-right: auto; }'))),
 
+    # google analytics tag, as per https://shiny.rstudio.com/articles/google-analytics.html
+    #tags$head(includeHTML(("google_analytics.html"))),
+    tags$head(HTML(
+      '<!-- Global site tag (gtag.js) - Google Analytics -->
+                <script async src="https://www.googletagmanager.com/gtag/js?id=G-DNQWNHXBR7"></script>
+                <script>
+                window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag("js", new Date());
+
+            gtag("config", "G-DNQWNHXBR7");
+            </script>'
+
+    )),
+
     # Application title
     titlePanel("Random Text with Markov Chains!"),
 
